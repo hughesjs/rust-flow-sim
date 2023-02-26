@@ -100,26 +100,26 @@ impl SimulationData {
     fn calculate_positions(&self, velocities: &Array1<Vector4<f64>>) -> Array1<Vector4<f64>> {
         Zip::from(&self.simulation_space.positions)
             .and(velocities)
-            .map_collect(|&current_position, &current_velocity| current_position + current_velocity * self.simulation_definition.time_step.as_secs_f64())
+            .par_map_collect(|&current_position, &current_velocity| current_position + current_velocity * self.simulation_definition.time_step.as_secs_f64())
     }
 
     fn calculate_velocities(&self, accelerations: &Array1<Vector4<f64>>) -> Array1<Vector4<f64>> {
         Zip::from(&self.simulation_space.positions)
             .and(accelerations)
-            .map_collect(|&current_velocity, &current_acceleration| current_velocity + current_acceleration * self.simulation_definition.time_step.as_secs_f64())
+            .par_map_collect(|&current_velocity, &current_acceleration| current_velocity + current_acceleration * self.simulation_definition.time_step.as_secs_f64())
     }
 
     fn calculate_accelerations(&self, pressure_terms: &Array1<Vector4<f64>>, viscosity_terms: &Array1<Vector4<f64>>) -> Array1<Vector4<f64>> {
         Zip::from(pressure_terms)
             .and(viscosity_terms)
-            .map_collect(|&pressure_term, &viscosity_term| &self.simulation_definition.gravity + pressure_term + viscosity_term)
+            .par_map_collect(|&pressure_term, &viscosity_term| &self.simulation_definition.gravity + pressure_term + viscosity_term)
     }
 
     fn calculate_viscosity_terms(&self, densities: &Array1<f64>) -> Array1<Vector4<f64>> {
         Zip::from(&self.simulation_space.positions)
             .and(densities)
             .and(&self.simulation_space.velocities)
-            .map_collect(|&current_position, &current_density, &current_velocity | {
+            .par_map_collect(|&current_position, &current_density, &current_velocity | {
                 Zip::from(&self.simulation_space.positions)
                     .and(densities)
                     .and(&self.simulation_space.velocities)
@@ -137,7 +137,7 @@ impl SimulationData {
         Zip::from(&self.simulation_space.positions)
             .and(densities)
             .and(pressures)
-            .map_collect(|&current_position, &current_density, &current_pressure | {
+            .par_map_collect(|&current_position, &current_density, &current_pressure | {
                 Zip::from(&self.simulation_space.positions)
                     .and(densities)
                     .and(pressures)
