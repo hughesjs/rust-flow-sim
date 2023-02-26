@@ -52,7 +52,7 @@ impl SimulationData {
             accelerations: Self::get_initial_accelerations(),
         };
 
-        let sim_data = SimulationData {
+        SimulationData {
             simulation_space: sim_space,
             current_time_seconds: 0.0,
             time_step_seconds,
@@ -60,9 +60,7 @@ impl SimulationData {
             is_finished: false,
 
             //voxel_pixel_map: HashMap::new()
-        };
-
-        return sim_data;
+        }
     }
 
     fn step(sim_data: &mut SimulationData) {
@@ -186,7 +184,7 @@ impl SimulationData {
                 0.0,
             );
         }
-        return positions;
+        positions
     }
 
     fn get_initial_velocities() ->  Array1<Vector4<f64>> {
