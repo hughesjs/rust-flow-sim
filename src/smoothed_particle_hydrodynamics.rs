@@ -24,9 +24,9 @@ impl SimulationSpace {
         let mut positions: Array1<Vector4<f64>> = Array1::from(vec![Vector4::zero(); buffer_len]);
         for i in 0..buffer_len {
             positions[i] = Vector4::new(
-                rng.gen_range(0.0..0.001),
-                rng.gen_range(0.0..0.001),
-                rng.gen_range(4.999..5.0),
+                rng.gen_range(0.0..0.1),
+                rng.gen_range(0.0..0.1),
+                rng.gen_range(4.9..5.0),
                 0.0,
             );
         }
