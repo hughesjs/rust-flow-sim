@@ -1,59 +1,11 @@
 use cgmath::{InnerSpace, Vector4, Zero};
-use rand::Rng;
 use std::f64::consts::PI;
 use ndarray::{Array1, Zip};
 use std::time::Duration;
-use rayon::prelude::*;
 
-struct SimulationSpace {
-    positions: Array1<Vector4<f64>>,
-    velocities:  Array1<Vector4<f64>>,
-    accelerations:  Array1<Vector4<f64>>,
-}
+use crate::smoothed_particle_hydrodynamics::simulation_definition::SimulationDefinition;
+use crate::smoothed_particle_hydrodynamics::simulation_space::SimulationSpace;
 
-impl SimulationSpace {
-    pub fn new(buffer_len: usize) -> Self {
-        SimulationSpace {
-            positions: Self::get_initial_positions(buffer_len),
-            velocities: Self::get_initial_velocities(buffer_len),
-            accelerations: Self::get_initial_accelerations(buffer_len),
-        }
-    }
-    
-    fn get_initial_positions(buffer_len: usize) -> Array1<Vector4<f64>>  {
-        let mut rng = rand::thread_rng();
-        let mut positions: Array1<Vector4<f64>> = Array1::from(vec![Vector4::zero(); buffer_len]);
-        for i in 0..buffer_len {
-            positions[i] = Vector4::new(
-                rng.gen_range(0.0..0.1),
-                rng.gen_range(0.0..0.1),
-                rng.gen_range(4.9..5.0),
-                0.0,
-            );
-        }
-        positions
-    }
-
-    fn get_initial_velocities(buffer_len: usize) ->  Array1<Vector4<f64>> {
-        Array1::from(vec![Vector4::zero(); buffer_len])
-    }
-
-    fn get_initial_accelerations(buffer_len: usize) ->  Array1<Vector4<f64>> {
-        Array1::from(vec![Vector4::zero(); buffer_len])
-    }
-}
-
-pub struct SimulationDefinition {
-    pub(crate) time_step: Duration,
-    pub(crate) sim_length: Duration,
-    pub(crate) num_particles: u64,
-    pub(crate) smoothing_radius: f64,
-    pub(crate) gravity: Vector4<f64>,
-    pub(crate) particle_mass_kg: f64,
-    pub(crate) fluid_constant: f64,
-    pub(crate) viscous_constant: f64,
-    pub(crate) rho_zero: f64
-}
 
 pub struct SimulationData {
     simulation_space: SimulationSpace,
@@ -113,7 +65,7 @@ impl SimulationData {
     fn calculate_accelerations(&self, pressure_terms: &Array1<Vector4<f64>>, viscosity_terms: &Array1<Vector4<f64>>) -> Array1<Vector4<f64>> {
         Zip::from(pressure_terms)
             .and(viscosity_terms)
-            .par_map_collect(|&pressure_term, &viscosity_term| &self.simulation_definition.gravity + pressure_term + viscosity_term)
+            .par_map_collect(|&pressure_term, &viscosity_term| self.simulation_definition.gravity + pressure_term + viscosity_term)
     }
 
     fn calculate_viscosity_terms(&self, densities: &Array1<f64>) -> Array1<Vector4<f64>> {
@@ -126,7 +78,7 @@ impl SimulationData {
                     .and(&self.simulation_space.velocities)
                     .fold(Vector4::zero(), | acc, &other_position, &other_density, &other_velocity | {
                         if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
-                            acc + ((&self.simulation_definition.viscous_constant / current_density) * &self.simulation_definition.particle_mass_kg * ((other_velocity - current_velocity) / other_density) * self.laplacian_smooth(current_position, other_position))
+                            acc + ((self.simulation_definition.viscous_constant / current_density) * self.simulation_definition.particle_mass_kg * ((other_velocity - current_velocity) / other_density) * self.laplacian_smooth(current_position, other_position))
                         } else {
                             acc
                         }
@@ -144,7 +96,7 @@ impl SimulationData {
                     .and(pressures)
                     .fold(Vector4::zero(), | acc, &other_position, &other_density, &other_pressure | {
                         if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
-                            acc + &self.simulation_definition.particle_mass_kg * ((current_pressure / current_density.powi(2)) + (other_pressure / other_density.powi(2)))* self.grad_smooth(current_position, other_position)
+                            acc + self.simulation_definition.particle_mass_kg * ((current_pressure / current_density.powi(2)) + (other_pressure / other_density.powi(2)))* self.grad_smooth(current_position, other_position)
                         } else {
                             acc
                         }
@@ -153,7 +105,7 @@ impl SimulationData {
     }
 
     fn calculate_pressures(&self, densities: &Array1<f64>) -> Array1<f64> {
-        densities.map(|&density| &self.simulation_definition.fluid_constant * (density - &self.simulation_definition.rho_zero))
+        densities.map(|&density| self.simulation_definition.fluid_constant * (density - self.simulation_definition.rho_zero))
     }
 
     fn calculate_densities(&self) -> Array1<f64> {
@@ -161,7 +113,7 @@ impl SimulationData {
         Zip::from(&self.simulation_space.positions).par_map_collect(|&current_position| {
             self.simulation_space.positions.fold(0.0, |acc, &other_position| {
                 if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
-                    acc + &self.simulation_definition.particle_mass_kg * self.smooth(current_position, other_position)
+                    acc + self.simulation_definition.particle_mass_kg * self.smooth(current_position, other_position)
                 } else {
                     acc
                 }

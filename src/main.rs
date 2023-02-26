@@ -1,9 +1,9 @@
-mod smoothed_particle_hydrodynamics;
-
 use std::time::Duration;
 use cgmath::Vector4;
-use smoothed_particle_hydrodynamics::SimulationData;
-use crate::smoothed_particle_hydrodynamics::SimulationDefinition;
+
+mod smoothed_particle_hydrodynamics;
+use crate::smoothed_particle_hydrodynamics::simulation_definition::*;
+use crate::smoothed_particle_hydrodynamics::simulation_data::*;
 
 const TIME_STEP_SECONDS: Duration = Duration::from_micros(1);
 const SIM_LENGTH_SECONDS: Duration = Duration::from_secs(10);
