@@ -3,6 +3,7 @@ use rand::Rng;
 use std::f64::consts::PI;
 use ndarray::{Array1, Zip};
 use std::time::Duration;
+use rayon::prelude::*;
 
 struct SimulationSpace {
     positions: Array1<Vector4<f64>>,
@@ -156,7 +157,8 @@ impl SimulationData {
     }
 
     fn calculate_densities(&self) -> Array1<f64> {
-        self.simulation_space.positions.map(|&current_position| {
+        // I don't like zipping this single thing but...
+        Zip::from(&self.simulation_space.positions).par_map_collect(|&current_position| {
             self.simulation_space.positions.fold(0.0, |acc, &other_position| {
                 if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
                     acc + &self.simulation_definition.particle_mass_kg * self.smooth(current_position, other_position)

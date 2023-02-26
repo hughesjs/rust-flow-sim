@@ -7,7 +7,7 @@ use crate::smoothed_particle_hydrodynamics::SimulationDefinition;
 
 const TIME_STEP_SECONDS: Duration = Duration::from_micros(1);
 const SIM_LENGTH_SECONDS: Duration = Duration::from_secs(10);
-const NUM_PARTICLES: u64 = 1000; // should be 12000 = 1.2 Litres
+const NUM_PARTICLES: u64 = 12000; // should be 12000 = 1.2 Litres
 const SMOOTHING_RADIUS: f64 = 0.001; // 1mm
 const GRAVITY: Vector4<f64> = Vector4::new(0.0, -9.8, 0.0, 0.0);
 const PARTICLE_MASS_KG: f64 = 0.000001; //1uL of water
