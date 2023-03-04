@@ -14,9 +14,9 @@ pub struct PolySixKernel {
 impl SmoothingKernel for PolySixKernel  {
     fn new(smoothing_radius: SimulationFloat) -> PolySixKernel {
         PolySixKernel {
-            kernel_coefficient: (315.0 / (64.0 * PI * (smoothing_radius.powi(9)))),
-            grad_coefficient: (-45.0 / (PI * (smoothing_radius.powi(6)))),
-            laplacian_coefficient: (45.0 / (PI * (smoothing_radius.powi(6)))),
+            kernel_coefficient: (315.0 / (64.0 * PI as SimulationFloat * (smoothing_radius.powi(9)))),
+            grad_coefficient: (-45.0 / (PI as SimulationFloat * (smoothing_radius.powi(6)))),
+            laplacian_coefficient: (45.0 / (PI as SimulationFloat * (smoothing_radius.powi(6)))),
             radius: 0.0,
             radius_squared: 0.0,
         }
