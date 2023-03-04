@@ -6,7 +6,7 @@ use cgmath::{Vector4};
     };
 }
 
-pub trait SmoothingKernel {
+pub trait SmoothingKernel: Sync + Send{
     fn new(smoothing_radius: float_precision!()) -> Self;
     fn kernel(&self, current_location: Vector4<float_precision!()>, other_location: Vector4<float_precision!()>) -> float_precision!();
     fn kernel_grad(&self, current_location: Vector4<float_precision!()>, other_location: Vector4<float_precision!()>) -> Vector4<float_precision!()>;

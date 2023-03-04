@@ -1,22 +1,22 @@
 use cgmath::{InnerSpace, Vector4, Zero};
-use std::f64::consts::PI;
 use ndarray::{Array1, Zip};
 use std::time::Duration;
 
 use crate::smoothed_particle_hydrodynamics::simulation_definition::SimulationDefinition;
 use crate::smoothed_particle_hydrodynamics::simulation_space::SimulationSpace;
+use crate::smoothed_particle_hydrodynamics::smoothing_kernels::smoothing_kernel::SmoothingKernel;
 //https://nccastaff.bournemouth.ac.uk/jmacey/MastersProject/MSc15/06Burak/BurakErtekinMScThesis.pdf
 
-pub struct SimulationData {
+pub struct SimulationData<TKernel: SmoothingKernel> {
     simulation_space: SimulationSpace,
-    simulation_definition: SimulationDefinition,
+    simulation_definition: SimulationDefinition<TKernel>,
     current_time: Duration,
     pub is_finished: bool,
     //voxel_pixel_map: HashMap<u16, Vec<u32>>
 }
 
-impl SimulationData {
-    pub fn new(simulation_definition: SimulationDefinition) -> SimulationData {
+impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
+    pub fn new(simulation_definition: SimulationDefinition<TKernel>) -> SimulationData<TKernel> {
         SimulationData {
             simulation_space: SimulationSpace::new(simulation_definition.num_particles as usize),
             simulation_definition,
@@ -78,7 +78,7 @@ impl SimulationData {
                     .and(&self.simulation_space.velocities)
                     .fold(Vector4::zero(), | acc, &other_position, &other_density, &other_velocity | {
                         if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
-                            acc + ((self.simulation_definition.viscous_constant / current_density) * self.simulation_definition.particle_mass_kg * ((other_velocity - current_velocity) / other_density) * self.laplacian_smooth(current_position, other_position))
+                            acc + ((self.simulation_definition.viscous_constant / current_density) * self.simulation_definition.particle_mass_kg * ((other_velocity - current_velocity) / other_density) * self.simulation_definition.smoothing_kernel.kernel_laplacian(current_position, other_position))
                         } else {
                             acc
                         }
@@ -96,7 +96,7 @@ impl SimulationData {
                     .and(pressures)
                     .fold(Vector4::zero(), | acc, &other_position, &other_density, &other_pressure | {
                         if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
-                            acc + self.simulation_definition.particle_mass_kg * ((current_pressure / current_density.powi(2)) + (other_pressure / other_density.powi(2)))* self.grad_smooth(current_position, other_position)
+                            acc + self.simulation_definition.particle_mass_kg * ((current_pressure / current_density.powi(2)) + (other_pressure / other_density.powi(2))) * self.simulation_definition.smoothing_kernel.kernel_grad(current_position, other_position)
                         } else {
                             acc
                         }
@@ -113,7 +113,7 @@ impl SimulationData {
         Zip::from(&self.simulation_space.positions).par_map_collect(|&current_position| {
             self.simulation_space.positions.fold(0.0, |acc, &other_position| {
                 if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
-                    acc + self.simulation_definition.particle_mass_kg * self.smooth(current_position, other_position)
+                    acc + self.simulation_definition.particle_mass_kg * self.simulation_definition.smoothing_kernel.kernel(current_position, other_position)
                 } else {
                     acc
                 }
@@ -123,23 +123,6 @@ impl SimulationData {
 
     fn is_in_interaction_radius_and_not_self(&self, current: Vector4<f64>, other: Vector4<f64>) -> bool {
         current != other && (current - other).magnitude() < self.simulation_definition.smoothing_radius
-    }
-
-    // There are some terms reused between smooth, grad_smooth and laplacian_smooth, this could be optimised
-    // Not to mention, some of these terms are constants...
-    fn smooth(&self, current_position: Vector4<f64>, other_position: Vector4<f64>) -> f64 {
-        (315.0 / (64.0 * PI * (self.simulation_definition.smoothing_radius.powi(9)))) * (self.simulation_definition.smoothing_radius.powi(2) - (current_position - other_position).magnitude2()).powi(3)
-    }
-
-    fn grad_smooth(&self, current_position: Vector4<f64>, other_position: Vector4<f64>) -> Vector4<f64> {
-        (-45.0 / (PI * (self.simulation_definition.smoothing_radius.powi(6))))
-            * (self.simulation_definition.smoothing_radius - (current_position - other_position).magnitude2()).powi(2)
-            * ((current_position - other_position) / (current_position - other_position).magnitude2())
-    }
-
-    fn laplacian_smooth(&self, current_position: Vector4<f64>, other_position: Vector4<f64>) -> f64 {
-        (45.0 / (PI * (self.simulation_definition.smoothing_radius.powi(6))))
-            * (self.simulation_definition.smoothing_radius - (current_position - other_position).magnitude())
     }
 }
 

@@ -3,7 +3,7 @@ use cgmath::{InnerSpace, Vector4};
 use crate::float_precision;
 use crate::smoothed_particle_hydrodynamics::smoothing_kernels::smoothing_kernel::SmoothingKernel;
 
-struct PolySixKernel {
+pub struct PolySixKernel {
     kernel_coefficient:  float_precision!(),
     grad_coefficient: float_precision!(),
     laplacian_coefficient: float_precision!(),
