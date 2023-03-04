@@ -1,12 +1,6 @@
 use cgmath::{Vector4};
 use crate::SimulationFloat;
 
-#[macro_export] macro_rules! float_precision {
-    () => {
-        SimulationFloat
-    };
-}
-
 pub trait SmoothingKernel: Sync + Send{
     fn new(smoothing_radius: SimulationFloat) -> Self;
     fn kernel(&self, current_location: Vector4<SimulationFloat>, other_location: Vector4<SimulationFloat>) -> SimulationFloat;

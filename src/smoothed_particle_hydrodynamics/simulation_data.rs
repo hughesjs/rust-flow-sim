@@ -1,6 +1,7 @@
 use cgmath::{InnerSpace, Vector4, Zero};
 use ndarray::{Array1, Zip};
 use std::time::Duration;
+use cgmath::num_traits::Float;
 use crate::SimulationFloat;
 
 use crate::smoothed_particle_hydrodynamics::simulation_definition::SimulationDefinition;
@@ -112,7 +113,8 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
     fn calculate_densities(&self) -> Array1<SimulationFloat> {
         // I don't like zipping this single thing but...
         Zip::from(&self.simulation_space.positions).par_map_collect(|&current_position| {
-            self.simulation_space.positions.fold(0.0, |acc, &other_position| {
+            // 0 Density is impossible, and this also guards against /0 errors, so this is a win-win
+            self.simulation_space.positions.fold(SimulationFloat::epsilon(), |acc, &other_position| {
                 if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
                     acc + self.simulation_definition.particle_mass_kg * self.simulation_definition.smoothing_kernel.kernel(current_position, other_position)
                 } else {
@@ -123,6 +125,7 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
     }
 
     fn is_in_interaction_radius_and_not_self(&self, current: Vector4<SimulationFloat>, other: Vector4<SimulationFloat>) -> bool {
+        // Checking the interaction radius here is redundant, but it short-circuits a bunch of calculations
         current != other && (current - other).magnitude() < self.simulation_definition.smoothing_radius
     }
 }
