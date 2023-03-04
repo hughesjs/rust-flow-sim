@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::smoothed_particle_hydrodynamics::simulation_definition::SimulationDefinition;
 use crate::smoothed_particle_hydrodynamics::simulation_space::SimulationSpace;
-
+//https://nccastaff.bournemouth.ac.uk/jmacey/MastersProject/MSc15/06Burak/BurakErtekinMScThesis.pdf
 
 pub struct SimulationData {
     simulation_space: SimulationSpace,
