@@ -1,4 +1,4 @@
-use cgmath::{InnerSpace, Vector4, Zero};
+use cgmath::{InnerSpace, Vector3, Zero};
 use ndarray::{Array1, Zip};
 use std::time::Duration;
 use cgmath::num_traits::Float;
@@ -52,25 +52,25 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
         println!("{:?}", self.simulation_space.positions[0])
     }
 
-    fn calculate_positions(&self, velocities: &Array1<Vector4<SimulationFloat>>) -> Array1<Vector4<SimulationFloat>> {
+    fn calculate_positions(&self, velocities: &Array1<Vector3<SimulationFloat>>) -> Array1<Vector3<SimulationFloat>> {
         Zip::from(&self.simulation_space.positions)
             .and(velocities)
             .par_map_collect(|&current_position, &current_velocity| current_position + current_velocity * self.simulation_definition.time_step_in_secs_as_float)
     }
 
-    fn calculate_velocities(&self, accelerations: &Array1<Vector4<SimulationFloat>>) -> Array1<Vector4<SimulationFloat>> {
+    fn calculate_velocities(&self, accelerations: &Array1<Vector3<SimulationFloat>>) -> Array1<Vector3<SimulationFloat>> {
         Zip::from(&self.simulation_space.positions)
             .and(accelerations)
             .par_map_collect(|&current_velocity, &current_acceleration| current_velocity + current_acceleration * self.simulation_definition.time_step_in_secs_as_float)
     }
 
-    fn calculate_accelerations(&self, pressure_terms: &Array1<Vector4<SimulationFloat>>, viscosity_terms: &Array1<Vector4<SimulationFloat>>) -> Array1<Vector4<SimulationFloat>> {
+    fn calculate_accelerations(&self, pressure_terms: &Array1<Vector3<SimulationFloat>>, viscosity_terms: &Array1<Vector3<SimulationFloat>>) -> Array1<Vector3<SimulationFloat>> {
         Zip::from(pressure_terms)
             .and(viscosity_terms)
             .par_map_collect(|&pressure_term, &viscosity_term| self.simulation_definition.gravity + pressure_term + viscosity_term)
     }
 
-    fn calculate_viscosity_terms(&self, densities: &Array1<SimulationFloat>) -> Array1<Vector4<SimulationFloat>> {
+    fn calculate_viscosity_terms(&self, densities: &Array1<SimulationFloat>) -> Array1<Vector3<SimulationFloat>> {
         Zip::from(&self.simulation_space.positions)
             .and(densities)
             .and(&self.simulation_space.velocities)
@@ -78,7 +78,7 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
                 Zip::from(&self.simulation_space.positions)
                     .and(densities)
                     .and(&self.simulation_space.velocities)
-                    .fold(Vector4::zero(), | acc, &other_position, &other_density, &other_velocity | {
+                    .fold(Vector3::zero(), | acc, &other_position, &other_density, &other_velocity | {
                         if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
                             acc + ((self.simulation_definition.viscous_constant / current_density) * self.simulation_definition.particle_mass_kg * ((other_velocity - current_velocity) / other_density) * self.simulation_definition.smoothing_kernel.kernel_laplacian(current_position, other_position))
                         } else {
@@ -88,7 +88,7 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
             })
     }
 
-    fn calculate_pressure_grad_terms(&self, densities: &Array1<SimulationFloat>, pressures: &Array1<SimulationFloat>) -> Array1<Vector4<SimulationFloat>> {
+    fn calculate_pressure_grad_terms(&self, densities: &Array1<SimulationFloat>, pressures: &Array1<SimulationFloat>) -> Array1<Vector3<SimulationFloat>> {
         Zip::from(&self.simulation_space.positions)
             .and(densities)
             .and(pressures)
@@ -96,7 +96,7 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
                 Zip::from(&self.simulation_space.positions)
                     .and(densities)
                     .and(pressures)
-                    .fold(Vector4::zero(), | acc, &other_position, &other_density, &other_pressure | {
+                    .fold(Vector3::zero(), | acc, &other_position, &other_density, &other_pressure | {
                         if self.is_in_interaction_radius_and_not_self(current_position, other_position) {
                             acc + self.simulation_definition.particle_mass_kg * ((current_pressure / current_density.powi(2)) + (other_pressure / other_density.powi(2))) * self.simulation_definition.smoothing_kernel.kernel_grad(current_position, other_position)
                         } else {
@@ -124,7 +124,7 @@ impl<TKernel: SmoothingKernel> SimulationData<TKernel> {
         })
     }
 
-    fn is_in_interaction_radius_and_not_self(&self, current: Vector4<SimulationFloat>, other: Vector4<SimulationFloat>) -> bool {
+    fn is_in_interaction_radius_and_not_self(&self, current: Vector3<SimulationFloat>, other: Vector3<SimulationFloat>) -> bool {
         // Checking the interaction radius here is redundant, but it short-circuits a bunch of calculations
         current != other && (current - other).magnitude() < self.simulation_definition.smoothing_radius
     }

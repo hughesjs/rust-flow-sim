@@ -1,5 +1,5 @@
 use std::time::Duration;
-use cgmath::Vector4;
+use cgmath::Vector3;
 
 mod smoothed_particle_hydrodynamics;
 
@@ -15,7 +15,7 @@ const NUM_PARTICLES: u64 = 12000;
 // should be 12000 = 1.2 Litres
 const SMOOTHING_RADIUS: SimulationFloat = 0.001;
 // 1mm
-const GRAVITY: Vector4<SimulationFloat> = Vector4::new(0.0, -9.8, 0.0, 0.0);
+const GRAVITY: Vector3<SimulationFloat> = Vector3::new(0.0, -9.8, 0.0);
 const PARTICLE_MASS_KG: SimulationFloat = 0.000001;
 //1uL of water
 const FLUID_CONST: SimulationFloat = 2200000000.0;
